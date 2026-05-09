@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seguimiento a Personal de Estructura y Soporte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8fafc; /* Minimalist slate-50 background */
+            color: #1e293b; /* High contrast slate-800 text */
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 280px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 320px;
+            }
+        }
+        .progress-bar-fill {
+            transition: width 1s ease-in-out;
+        }
+        .tab-btn.active {
+            border-bottom: 2px solid #1e293b;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .tab-btn {
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+        }
+        .hide-section {
+            display: none;
+        }
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom Scrollbar for tasks list */
+        .task-list::-webkit-scrollbar { width: 6px; }
+        .task-list::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .task-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-[#e2e8f0] sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-[#1e293b]">Control y Seguimiento</h1>
+                <p class="text-sm text-[#64748b]">Central Azucarero Las Majaguas - Seguimiento de Trabajo MOI</p>
+            </div>
+            <div class="flex items-center gap-3 bg-[#f0fdf4] px-4 py-2 rounded-full border border-[#bbf7d0]">
+                <span class="text-lg">📅</span>
+                <span class="text-sm font-medium text-[#166534]">08 de May, 2026</span>
+                <span class="w-1 h-4 bg-[#86efac] mx-1"></span>
+                <span class="text-xs uppercase tracking-wider text-[#166534] font-bold">Avance Global: 82%</span>
+            </div>
+        </div>
+        <div class="max-w-6xl mx-auto px-6 mt-2">
+            <nav class="flex gap-6">
+                <button onclick="switchTab('proyectos')" id="tab-proyectos" class="tab-btn active pb-3 text-sm transition-colors">📊 Carga por Responsable</button>
+                <button onclick="switchTab('incidencias')" id="tab-incidencias" class="tab-btn pb-3 text-sm transition-colors">⚠️ Alertas Operativas</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-6xl mx-auto px-6 py-8 w-full">
+
+        <section id="sec-proyectos" class="fade-in block">
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-2">Distribución de Mano de Obra Indirecta</h2>
+                <p class="text-[#64748b] text-sm leading-relaxed max-w-3xl">
+                    Este panel consolida el estado de las actividades asignadas al personal de estructura y soporte. Permite auditar el volumen de tareas completadas frente a las que continúan en proceso, facilitando la redistribución de la carga laboral.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="card p-6 lg:col-span-1 flex flex-col items-center justify-center">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-[#64748b] mb-4 w-full text-left">Estado Global de Tareas</h3>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                    <div class="mt-4 flex flex-col gap-2 w-full">
+                        <div class="flex justify-between text-sm">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-[#16a34a]"></span> Completado</span>
+                            <span class="font-bold">50</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-[#2563eb]"></span> En Proceso</span>
+                            <span class="font-bold">14</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 lg:col-span-2">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-[#64748b] mb-6">Métricas de Ejecución por Asignación</h3>
+                    
+                    <div class="space-y-6 task-list overflow-y-auto max-h-[450px] pr-4">
+                        
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REUNION  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">REUNION DE MESA TECNICA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REUNION  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">CONVERSATORIO CON LOS GERENTES DE OPERACIONES / MANTENIMIENTO / PLANIFICACION Y PROYECTOS</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REUNION  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">MONITOREAR AVANCES DEL PLAN SEMANAL DE ACTIVIDADES CON LA ING. EN GESTION ORGANIZACIONAL Y LA ASISTENTE DE LA SUPERINTENDENCIA DE INDUSTRIA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REUNION  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">SEGUIMIENTO DIARIO EN LA GERENCIA DE COMPRAS PARA EVALUACION MATERIALES Y SERVICIOS  </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 40.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REUNION  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2"> REUNION : RUTA CRITICA DE CONTRATACIONES PUBLICAS Y CONTROL INTERNO</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    RECORRIDO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">EVALUAR CONDICIONES Y ESTATUS DE REPARACION DE EQUIPOS EN PLANTA </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 60.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PROJET 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">nan</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">EVALUACION DE LOS PROJET PARA DETERMINAR TRABAJOS QUE SE PUEDAN REALIZAR DE MANERA INMEDIATA CON EL MATERIAL EXISTENTE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: nan%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    COSTOS  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">IMPUTAR COSTOS Y EVALUACION DE LOS MISMOS SEGÚN EL AREA </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    COSTOS  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">MEJORA CONTINUA A BASE DE DATOS Y KPIS DE LA BASE DE COSTOS </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 40.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    SEGUIMIENTO A PASANTES  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ORIENTACIONES Y EVALUACIONES DE LOS AVANCES DE LAS TAREAS ASIGNADAS </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 60.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    FIRMA DE VALUACIONES  
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">REVISION Y EVALUACION DE LAS VALUACIONES DE MAQUINARIA AMARILLA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE PROPUESTA PARA DISFRUTE DE DESCANSO VACACIONAL </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE MEMORANDUM PARA INFORMACION DE AUSENCIA DEL ING. ANIBAL GARCIA </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ENVIO DE LISTADO DE PRIORIDAD DE SERVICIOS A LA GERENCIA DE COMPRAS </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">CONVERSATORIO CON LA GERENCIA DE CONTABILIDAD PARA COORDINAR LOS COSTOS DE INDUSTRIA </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">REVISION DE FINIQUITOS PARA CONTINUAR CON LA ELABORACION DE EXPEDIENTES DEL PERIODO ZAFRA 2025-2026</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 20.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE SOLICITUD DE SERVICIO POR LA GERENCIA DE PATRIMONIO INDUSTRIAL PARA TRABAJOS DE INFRAESTRUCTURA EN FABRICA-TACHOS Y CASA BOMBA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 50.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE FINIQUITOS DE SD INSPECCIONES, SIDELCA Y REINVECA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 20.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DEL INFORME DE LA SEMANA N°6</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">REVISION DE EXPEDIENTE DE TACA. CA RELACIONADO AL SERVICIO DE LA BOMBA DE AGUA DE ALIMENTACION DE CALDERAS</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 30.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DOCUMENTACION TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE MEMORANDUM INFORMATIVO DE PERSONAL QUE ASISTIRA LA SEMANA DEL 11 AL 15 Y PERSONAL DE ELECTRICIDAD A CUMPLIR CON RESPONSABILIDADES DEL DIESEL</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REUNION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">AVANCES MATERIALES SERVICIOS DESVIACIONES LINIAMIENTO CON DIRECCION DE EMPRESA </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">LINIAMIENTOS Y PROYECTOS CON SUPERINTENDENTE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">LINIAMIENTOS Y AVANCE DE ACTIVIDADES CON JEFES Y COORD. DE AREAS DE OPERACION</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">LINIAMIENTOS METODOLOGIA DE TRABAJO CON ANALISTA Y ESPECIALISTA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">RELACIONADO AVANCE DE ACTIVIDADES DE PASANTES</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    SUPERVICION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">SUPERVISAR ACTIVIDADES DE MANTENIMIENTO EN LAS AREAS DE OPERACIONES</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORMES 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION INFORME DE CIERRE SEMANAL</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORMES 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION INFORME DE ACTIVIDADES ADICIONALES Y HALLAZGOS</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORMES 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">REVISION DE LOS INFORMES DE LOS EQUIPOS DE OPERACIONES REALIZADOS POR MBC</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    AUTUALIZAR 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">CHEQUEO DE ACTIVIDADES EN EL PROJECT DE CADA AREA DE OPERACIONES</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    LEVANTAMIENTO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">INFORMACION DE EQUIPOS PARA CREAR BASE DE DATOS DE OPERACIONES</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    DESARROLLO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">BASE DE DATOS DE AVANCE Y CONTROL DE EQUIPOS DE LAS AREAS DE OPERACIONES</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REUNION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">PLANIFICACION Y AVANCE DE ACTIVIDADES CON COORDINADORES DE FABRICA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">GERENTE DE OPERACIONES Y SUPERINTENDENCIA PLANIFICACION Y AVANCE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">COORDINADORES Y SUPERVISORES PLANIFICACION Y AVANCE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PLANIFICACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ACTIVIDADES DE LA SEMANA PROXIMA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    SUPERVICION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">SUPERVISAR ACTIVIDADES  DE MANTENIMIENTO</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORMES 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">AVANCE DIARIO Y CIERRE </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">PLANIFICACION Y AVANCE DE ACTIVIDADES CON COORDINADORES DE CALDEARA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">GERENTE DE OPERACIONES Y SUPERINTENDENCIA PLANIFICACION Y AVANCE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">COORDINADORES Y SUPERVISORES PLANIFICACION Y AVANCE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PLANIFICACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ACTIVIDADES DE LA SEMANA PROXIMA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    SUPERVICION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">SUPERVISAR ACTIVIDADES  DE MANTENIMIENTO</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORMES 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">AVANCE DIARIO Y CIERRE </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">PLANIFICACION Y AVANCE DE ACTIVIDADES CON COORDINADORES DE PATIO Y MOLINOS</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">GERENTE DE OPERACIONES Y SUPERINTENDENCIA PLANIFICACION Y AVANCE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">COORDINADORES Y SUPERVISORES PLANIFICACION Y AVANCE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PLANIFICACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ACTIVIDADES DE LA SEMANA PROXIMA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    SUPERVICION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">SUPERVISAR ACTIVIDADES  DE MANTENIMIENTO</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORMES 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">AVANCE DIARIO Y CIERRE </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    CONVERSATORIO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">GERENTE DE OPERACIONES Y SUPERINTENDENCIA PLANIFICACION Y AVANCE</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PLANIFICACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ACTIVIDADES DE LA SEMANA PROXIMA</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    SUPERVICION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">SUPERVISAR ACTIVIDADES  DE MANTENIMIENTO</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    ASIGNACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">RECEPCION Y ASIGNACION DE MATERIALES PARA CADA UNO DE LOS DEPARTAMENTOS </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    ASISTENCIA TECNICA 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">APOYO DURANTE EL PROCESO DE FABRICACION DEL NUEVO TANQUE DE IMBIBICION </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    ELABORACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACIÓN DE LA PLANIFICACIÓN DE ACTIVIDADES POR DEPARTAMENTO PARA LA CONTINUACION DEL PERÍODO DE LIMPIEZA Y DESARME POST-ZAFRA 2025-2026</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    ELABORACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACIÓN DE LOS ALCANCES ASOCIADOS A LOS SERVICIOS</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 15.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    ELABORACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">CONSOLIDACION DE LISTA DE MATERIALES </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    ELABORACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">DETENIDO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ALCANCE DE 6 SERVICIOS DE OBRAS CIVILES DE BOMBAS CENTRIFUGAS</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 70.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    ELABORACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">DETENIDO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORAR UNA PROPUESTA DE REHABILITACIÓN ESTRUCTURAL, FUNDAMENTADA EN LA EVALUACIÓN DE PATOLOGÍAS Y APLICACIÓN DE ESTANDARES DE CONTROL DE CALIDAD </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 5.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    ELABORACION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DEL PROYECTO  "ADECUACION DE LA SALA DE BOMBAS DE ALIMENTACION DE LAS CALDERAS"</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 48.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORME 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">PENDIENTE</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE RESUMEN DEL CIERRE DE LA SEMANA PARA EL PERIODO LIMPIEZA Y DESARME POST ZAFRA 2025-2026</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 0.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORME 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">DETENIDO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE VALUACIONES DE MAQUINARIA AMARILLA CORRESPONDIENTE A LA SEMANA Nº4 DEL PERIODO DE LIMPIEZA Y DESARME </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    INFORME 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE VALUACIONES DE MAQUINARIA AMARILLA CORRESPONDIENTE A LA SEMANA Nº5 DEL PERIODO DE LIMPIEZA Y DESARME </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PROYECTO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">DETENIDO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE INGENERIA DE DETALLE DEL PROYECTO "INSTALACION DEL SISTEMA DE SECADO DE BAGAZO"</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 65.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PROYECTO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">DETENIDO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DEL DISEÑO PARA LA INSTALACION DEL SISTEMA DE FILTRADO EN MOLINO</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 35.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PROYECTO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">DETENIDO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ELABORACION DE PLANOS DE INGENERIA DE DETALLE PARA CONSTRUCCION DE LOS SPROCKET DEL CONDUCTOR PLANO, CONDUCTOR INCLINADO Y RASTRA </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 70.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    PROYECTO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">DETENIDO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">PROYECTO "ADECUACION DE LA SALA DE ENVASE"</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 0.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REVISION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">ACTUALIZACION DEL CUADRO RESUMEN PARA EL PERIODO REPARACION INTER ZAFRA 2026</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 80.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REVISION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">PENDIENTE</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">MODIFICACION DE CUADRO RESUMEN DEL PLAN DE REPARACION INTER ZAFRA 2026, EN FUNCION DE LA CANTIDAD DE ACTIVIDADES POR CADA UNO DE LOS DEPARTAMENTOS </p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REVISION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">PENDIENTE</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">REVISION A LA MODIFICACION POSINSPECCION DEL ALCANCE Y LISTADO DE MATERIAL PARA EL PROYECTO "REHABILITACION DE LA CAJA 3B"</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 0.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REVISION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">PENDIENTE</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">REVISION A LA MODIFICACION MODIFICACION POSINSPECCION DEL ALCANCE Y LISTADO DE MATERIAL PARA EL PROYECTO "REHABILITACION DE LA CAJA 2B"</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 0.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    SEGUIMIENTO 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">SEGUIMIENTO Y CONTROL DE LAS ACTIVIDADES PLANIFICADAS PARA LA CONTINUACION DEL PERIODO DE LIMPIEZA Y DESARME POST-ZAFRA 2025-2026</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 80.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REVISION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">COMPLETADO</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">RECOPILACION DE PLANOS PARA LA COTIZACION DE LOS SERVCIOS</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 100.0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-medium text-[15px] text-[#1e293b]">
+                                    REVISION 
+                                    <span class="font-normal text-[#64748b] text-sm">| </span>
+                                </span>
+                                
+                                
+                                    <span class="text-xs font-bold text-[#2563eb] bg-[#eff6ff] border border-[#bfdbfe] px-2 py-1 rounded">EN EJECUCION</span>
+                                
+                            </div>
+                            <p class="text-xs text-[#64748b] mb-2">REVISION A LA CONSOLIDACION DE LISTA DE MATERIALES</p>
+                            <div class="w-full bg-[#f1f5f9] rounded-full h-2">
+                                <div class="bg-[#2563eb] h-2 rounded-full progress-bar-fill" style="width: 80.0%"></div>
+                            </div>
+                        </div>
+                        
+                        </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-incidencias" class="hide-section fade-in">
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-2">Alertas y Cuellos de Botella</h2>
+                <p class="text-[#64748b] text-sm leading-relaxed max-w-3xl">
+                    Registro de impedimentos que retrasan la ejecución de las actividades de la MOI. Permite enfocar los esfuerzos gerenciales en destrabar procesos críticos.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div class="card border-l-4 border-l-[#e11d48] overflow-hidden">
+                    <div class="bg-[#e11d48]/5 px-6 py-4 border-b border-[#e2e8f0] flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">⚠️</span>
+                            <h3 class="font-bold text-[#e11d48]">Falla de conectividad</h3>
+                        </div>
+                        <span class="text-xs font-bold text-white bg-[#e11d48] px-2 py-1 rounded-full animate-pulse">Crítico</span>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm font-semibold mb-1">Impacto: <span class="font-normal text-[#64748b]">Toda la industria</span></p>
+                        <div class="bg-[#f8fafc] p-4 rounded text-sm text-[#1e293b] border border-[#e2e8f0]">
+                            Falla general en el servicio de internet. El estado intermitente impacta directamente en el flujo regular de las comunicaciones corporativas y paraliza parcial o totalmente los sistemas dependientes de la red.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-[#e2e8f0] py-6 mt-auto">
+        <div class="max-w-6xl mx-auto px-6 text-center">
+            <p class="text-xs text-[#64748b]">Franks Cortez/Jefe de Control y Seguimiento</p>
+        </div>
+    </footer>
+
+    <script>
+        // Inyectar datos de Jinja2 directamente en Chart.js
+        const completadas = 50;
+        const en_proceso = 14;
+
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completado', 'En Proceso / Detenido'],
+                datasets: [{
+                    data: [completadas, en_proceso],
+                    backgroundColor: ['#16a34a', '#2563eb'], // Verde corporativo y Azul corporativo
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        padding: 12,
+                        cornerRadius: 4,
+                        callbacks: {
+                            label: function(context) {
+                                return ' ' + context.label + ': ' + context.raw + ' Tareas';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        function switchTab(tabId) {
+            document.getElementById('tab-proyectos').classList.remove('active');
+            document.getElementById('tab-incidencias').classList.remove('active');
+            
+            document.getElementById('sec-proyectos').classList.add('hide-section');
+            document.getElementById('sec-incidencias').classList.add('hide-section');
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            document.getElementById('sec-' + tabId).classList.remove('hide-section');
+        }
+    </script>
+</body>
+</html>
